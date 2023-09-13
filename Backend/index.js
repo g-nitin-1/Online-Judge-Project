@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const bodyParser = require("body-parser");
-const database = require('./config/Dadabase')
 const { generateFile } = require('./generateFile');
 const { executeCpp } = require('./executeCpp');
 const cors  = require('cors');
@@ -33,12 +32,27 @@ app.use(passport.session());
 mongoose.connect("mongodb://127.0.0.1:27017/userDB",{useNewUrlParser: true});
 
 const userSchema = new mongoose.Schema ({
-  name: String,
-  email: String,
-  password: String,
-  role: String,
+  name :{
+    type: String
+  },
+  email :{
+    type : String,
+    required : true,
+    unique: true
+  },
+  password: {
+  type: String,
+  required: true
+  },
+  role: {
+  type: String,
+  default: "ROLE_MEMBER",
+  enum: ["ROLE_ADMIN", "ROLE_MEMBER"]
+  },
   googleId: String
-});
+},
+{timestamps: true }
+);
 
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
@@ -60,7 +74,7 @@ passport.deserializeUser(function(id, done) {
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: "http://localhost:5000/auth/google/questions",
+    callbackURL: "http://127.0.0.1:5000/auth/google/questions",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
@@ -80,7 +94,7 @@ app.get("/auth/google",
   passport.authenticate('google', { scope: ["profile"] })
 );
 
-app.get("/auth/google/secrets",
+app.get("/auth/google/questions",
   passport.authenticate('google', { failureRedirect: "/login" }),
   function(req, res) {
     // Successful authentication, redirect to secrets.
@@ -142,13 +156,15 @@ app.get("/logout", function(req, res){
 
 app.post("/register", function(req, res){
 
+  console.log("Hey")
   User.register({username: req.body.username}, req.body.password, function(err, user){
     if (err) {
       console.log(err);
-      res.redirect("/register");
+      console.log("Hey")
+      res.redirect("http://127.0.0.1:3000/register");
     } else {
       passport.authenticate("local")(req, res, function(){
-        res.redirect("/questions");
+        res.redirect("http://127.0.0.1:3000/questions");
       });
     }
   });
@@ -167,7 +183,7 @@ app.post("/login", function(req, res){
       console.log(err);
     } else {
       passport.authenticate("local")(req, res, function(){
-        res.redirect("/questions");
+        res.redirect("http://127.0.0.1:3000/questions");
       });
     }
   });

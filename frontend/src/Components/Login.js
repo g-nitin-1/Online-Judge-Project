@@ -30,7 +30,7 @@ theme="light"
       <div class="card">
       <h1>Login</h1>
         <div class="card-body">
-          <form action="/login" method="POST">
+          <form action="http://localhost:5000/login" method="POST">
             <div class="form-group">
               <label for="email">Email</label>
               <input type="email" class="form-control" name="username"/>
@@ -45,7 +45,7 @@ theme="light"
         </div>
       </div>
     </div>
-    <div class="col-sm-3">
+    <div class="col-sm-4">
       <div class="card">
         <div class="card-body">
         <a href="/auth/google">

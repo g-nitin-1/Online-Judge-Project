@@ -34,7 +34,7 @@ getQuestions().then((data)=>{
     </thead>
     <tbody>
 
-{Questions.map((item)=> 
+{Array.isArray(Questions) && Questions.map((item)=> 
    <tr>
         <td>{item.sequence}</td>
         <td><a type="button" href={'/question/'+item.uniquename} >{item.title}</a></td>

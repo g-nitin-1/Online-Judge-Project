@@ -1,5 +1,5 @@
 const Validator = require("validator");
-const isEmpty = require('lodash')
+const isEmpty = require("is-empty")
 
 
 

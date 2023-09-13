@@ -34,14 +34,13 @@ const NavBar = () => {
         <li class="nav-item">
           <a class="nav-link" href="/SampleCompiler">compiler</a>
         </li>
-  {user? <div>
-  <li class="nav-item">
+        </ul>
+        {user?<div class="nav-item navbar-nav">
           <a class="nav-link" href="/dashboard"></a>
-  </li>
-  </div>:<div><li class="nav-item">
+  </div>:<div class="nav-item navbar-nav ms-auto">
+          <a class="nav-link" href="/register">Register</a>
           <a class="nav-link" href="/login">Login</a>
-        </li></div>}
-     </ul>
+        </div>}
     </div>
   </div>
 
