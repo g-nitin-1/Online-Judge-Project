@@ -1,3 +1,4 @@
+
 # Online Judge
 
 A full-stack programming assessment platform where users can register, browse coding problems, write solutions in a browser-based editor, and evaluate JavaScript, Python, or Java programs against private test cases.
@@ -72,14 +73,14 @@ For a larger public deployment, the Docker judge should run on separate worker i
 
 ## Technology stack
 
-| Area | Technologies |
-| --- | --- |
-| Frontend | React 18, Vite, React Router, Axios, Material UI, Bootstrap, Ace Editor |
-| Backend | Node.js, Express, Mongoose, JWT, bcrypt, Helmet |
-| Database | MongoDB |
-| Judge | Docker, Node.js, Python, Eclipse Temurin Java |
-| Testing | Node test runner, MongoDB Memory Server, live Docker integration tests |
-| Automation | GitHub Actions, npm audit |
+| Area       | Technologies                                                            |
+| ---------- | ----------------------------------------------------------------------- |
+| Frontend   | React 18, Vite, React Router, Axios, Material UI, Bootstrap, Ace Editor |
+| Backend    | Node.js, Express, Mongoose, JWT, bcrypt, Helmet                         |
+| Database   | MongoDB                                                                 |
+| Judge      | Docker, Node.js, Python, Eclipse Temurin Java                           |
+| Testing    | Node test runner, MongoDB Memory Server, live Docker integration tests  |
+| Automation | GitHub Actions, npm audit                                               |
 
 ## Project structure
 
@@ -188,16 +189,16 @@ Test-case input and expected output are not included in participant-facing quest
 
 ## API overview
 
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/health` | Public | API health check |
-| `POST` | `/api/auth/register` | Public | Create an account |
-| `POST` | `/api/auth/login` | Public | Authenticate and receive a JWT |
-| `GET` | `/api/questions` | Public | List problems |
-| `GET` | `/api/questions/:uniquename` | Public | Retrieve one problem |
-| `POST` | `/api/questions` | Administrator | Create a problem and private tests |
-| `POST` | `/api/submit/run` | Authenticated | Judge a submission |
-| `GET` | `/api/submit/submissions/:question` | Authenticated | Retrieve personal submission history |
+| Method   | Endpoint                              | Access        | Purpose                              |
+| -------- | ------------------------------------- | ------------- | ------------------------------------ |
+| `GET`  | `/health`                           | Public        | API health check                     |
+| `POST` | `/api/auth/register`                | Public        | Create an account                    |
+| `POST` | `/api/auth/login`                   | Public        | Authenticate and receive a JWT       |
+| `GET`  | `/api/questions`                    | Public        | List problems                        |
+| `GET`  | `/api/questions/:uniquename`        | Public        | Retrieve one problem                 |
+| `POST` | `/api/questions`                    | Administrator | Create a problem and private tests   |
+| `POST` | `/api/submit/run`                   | Authenticated | Judge a submission                   |
+| `GET`  | `/api/submit/submissions/:question` | Authenticated | Retrieve personal submission history |
 
 Protected endpoints expect the header:
 
@@ -239,10 +240,6 @@ The core local workflow is functional and covered by automated tests. Planned im
 - Additional languages and customizable resource limits per problem
 - Browser-level end-to-end testing
 - Production deployment manifests and observability
-
-## Resume summary
-
-> Built a full-stack online judge using React, Node.js, Express, MongoDB, and Docker. Implemented JWT authentication, role-based APIs, private test-case evaluation, submission history, and multi-language code execution in resource-restricted containers. Added MongoDB and Docker integration tests, CI automation, dependency security auditing, and a Vite-based frontend build.
 
 ## License
 
