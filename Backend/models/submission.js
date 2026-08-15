@@ -15,7 +15,7 @@ var SubmissionSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["initial", "pass", "fail"],
+    enum: ["initial", "pass", "fail", "error"],
     default: "initial"
   },
   timeupdated: { type: Date, default: Date.now },

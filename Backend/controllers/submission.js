@@ -1,147 +1,89 @@
-const Question = require('../models/question')
-const RunnerManager = require('../Judge/RunnerManager')
-const Submission =  require('../models/submission')
-const moment = require('moment');
-const submission = require('../models/submission');
-const SleepUtil = require("../utils/").SleepUtil;
+const Question = require("../models/question");
+const { DockerRunner } = require("../Judge/DockerRunner");
+const Submission = require("../models/submission");
 
+const supportedLanguages = new Set(["java", "javascript", "python"]);
+const dockerRunner = new DockerRunner();
+let activeJobs = 0;
 
-const submission_run =async (req,res,next)=>{
-  SleepUtil.sleep();
-
-  var newsubmit =new Submission({
-    username: req.body.username,
-    questionname: req.body.uniquename,
-    language: req.body.language,
-    solution: req.body.solution,
-    status:"initial",
-    timeupdated:moment(new Date(Date.now())),
-    timesubmitted:moment(new Date(Date.now())),
-    runtime: 0
-
-  })
-
-   Submission.findOne(
-  {
-    username:newsubmit.username,
-    questionname:newsubmit.questionname,
-    language:newsubmit.language,
-    status:"initial"
-  }
-  ,
-  (err,submission)=>{
-    if(err)
-    {
-             console.log(err)
-
+async function submission_run(req, res, next) {
+  try {
+    if (process.env.JUDGE_ENGINE !== "docker") {
+      return res.status(503).json({
+        error: "Code execution is disabled until an isolated judge worker is configured"
+      });
     }
-    if(!submission)
-    {
-      newsubmit.save({new:true},(err,newsubmit)=>{
-        if(err)
-        {
-             console.log(err)
 
-        }
-         run(req, res, next, newsubmit);
-      })
+    const questionname = String(req.body.uniquename || "").trim();
+    const language = String(req.body.language || "").toLowerCase();
+    const solution = String(req.body.solution || "");
+
+    if (!questionname || !supportedLanguages.has(language)) {
+      return res.status(400).json({ error: "Invalid question or language" });
     }
-    else
-    {
-      submission.solution=newsubmit.solution
-      submission.timesubmitted=moment(new Date(Date.now()))
-
-
-     Submission.findByIdAndUpdate(submission._id ,
-      {
-        $set:submission
-      },
-       {new : true}
-     ,
-      (err,submission)=>{
-        if(err)
-        {
-             console.log(err)
-
-        }
-        run(req, res, next, submission);
-      }
-      )
+    if (!solution || solution.length > 100000) {
+      return res.status(400).json({ error: "Solution must contain 1 to 100000 characters" });
     }
-  }
-)
+    const question = await Question.findOne({ uniquename: questionname }).select("+testCases");
+    if (!question) {
+      return res.status(404).json({ error: "Question not found" });
+    }
 
-}
-   
+    const maximumJobs = Number(process.env.JUDGE_MAX_CONCURRENT) || 2;
+    if (activeJobs >= maximumJobs) {
+      return res.status(429).json({ error: "Judge capacity is currently full; try again shortly" });
+    }
 
+    activeJobs += 1;
+    try {
+      const submission = await Submission.create({
+        username: req.user._id,
+        questionname,
+        language,
+        solution,
+        status: "initial",
+        timesubmitted: new Date()
+      });
 
-
-
-
-function run(req, res, next, submission) {
-
-  var start = moment(new Date(Date.now()));
-
-  // 2. Then, run the solution to get the test result
-  RunnerManager.run(
-    submission.questionname,
-    submission.language,
-    submission.solution,
-    function(status, message) {
-      const result = {
-        status,
-        message
-      };
-      if (status == "pass" || status == "fail") {
-        var end = moment(new Date(Date.now()));
-
-        var ms = moment(end, "DD/MM/YYYY HH:mm:ss").diff(
-          moment(start, "DD/MM/YYYY HH:mm:ss")
-        );
-
-        // 3. Find the submission
-        Submission.findById(submission.id, function(err, submission) {
-          // update status
-          submission.status = status;
-          submission.runtime = ms;
-          submission.timesubmitted = moment(new Date(Date.now()));
-
-          //console.log(submission);
-          // 4. Update the submission
-          submission.save(function(err) {
-           console.log("d",result )
-               res.status(200).json(result);
-          });
+      const startedAt = Date.now();
+      let result;
+      try {
+        result = await dockerRunner.run({
+          language,
+          solution,
+          testCases: question.testCases
         });
-      } else {
-        res.status(200).json(result);
+      } catch (error) {
+        result = { status: "error", message: "Judge worker failed" };
+        console.error("Judge worker failed:", error);
       }
+
+      submission.status = result.status === "pass" || result.status === "fail" ? result.status : "error";
+      submission.runtime = Date.now() - startedAt;
+      submission.timeupdated = new Date();
+      await submission.save();
+
+      res.json(result);
+    } finally {
+      activeJobs -= 1;
     }
-  );
+  } catch (error) {
+    next(error);
+  }
 }
 
+async function getSubmissions(req, res, next) {
+  try {
+    const submissions = await Submission.find({
+      username: req.user._id,
+      questionname: req.params.filter,
+      status: { $ne: "initial" }
+    }).sort({ timesubmitted: "desc" });
 
-const getSubmitionAll = (req,res)=>{
- 
-
-  const userId = req.user._id
-  const question = req.params.filter
-
-  console.log(userId)
-   
-   Submission.find({
-    username: userId,
-    questionname: question,
-    status: { $ne: "initial" }
-  })
-    .sort({ timesubmitted: "desc" })
-    .exec(function(err, submissions) {
-      if (err) return next(err);
-      res.status(200).json(submissions);
-    });
-
-
+    res.json(submissions);
+  } catch (error) {
+    next(error);
+  }
 }
 
-
-module.exports={submission_run,getSubmitionAll}
+module.exports = { submission_run, getSubmissions };

@@ -1,1 +1,10 @@
 .env
+.env.*
+!.env.example
+node_modules/
+codes/
+outputs/
+judge/temp/
+Judge/temp/
+data/
+.cache/

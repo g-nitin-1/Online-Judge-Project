@@ -1,14 +1,16 @@
 import axios from "axios"
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 
 const getcode = async (qN)=>{
   try {
 
     const res = await axios
-      .get("http://localhost:5000/api/questions/"+qN)
+      .get(`${API_URL}/api/questions/${encodeURIComponent(qN)}`)
     return (res.data)
   } catch(err) {
-    return err
+    throw new Error(err.response?.data?.error || "Unable to load question")
   }
 
 

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+
+# Build and test output
+build/
+dist/
+coverage/
+.cache/
+*.log
+
+# Runtime-generated judge files
+Backend/codes/
+Backend/outputs/
+Backend/judge/temp/
+Backend/Judge/temp/
+Backend/data/
+*.exe
+tempCodeRunnerFile.*
+
+# Editor and operating-system metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

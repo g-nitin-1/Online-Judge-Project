@@ -1,212 +1,59 @@
-require('dotenv').config();
-const express = require('express');
-const app = express();
-const bodyParser = require("body-parser");
-const { generateFile } = require('./generateFile');
-const { executeCpp } = require('./executeCpp');
-const cors  = require('cors');
+require("dotenv").config();
+
+const cors = require("cors");
+const express = require("express");
+const helmet = require("helmet");
 const mongoose = require("mongoose");
-const session = require('express-session');
-const passport = require("passport");
-const passportLocalMongoose = require("passport-local-mongoose");
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const findOrCreate = require('mongoose-findorcreate');
+const routes = require("./routes");
 
-//edit starts
-//middlewares
-app.use(cors());
+const app = express();
+
+app.disable("x-powered-by");
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:3000" }));
+app.use(helmet());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(express.static("public"));
+app.use(express.json({ limit: "256kb" }));
 
-
-app.use(session({
-  secret: "Our little secret.",
-  resave: false,
-  saveUninitialized: false
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-mongoose.connect("mongodb://127.0.0.1:27017/userDB",{useNewUrlParser: true});
-
-const userSchema = new mongoose.Schema ({
-  name :{
-    type: String
-  },
-  email :{
-    type : String,
-    required : true,
-    unique: true
-  },
-  password: {
-  type: String,
-  required: true
-  },
-  role: {
-  type: String,
-  default: "ROLE_MEMBER",
-  enum: ["ROLE_ADMIN", "ROLE_MEMBER"]
-  },
-  googleId: String
-},
-{timestamps: true }
-);
-
-userSchema.plugin(passportLocalMongoose);
-userSchema.plugin(findOrCreate);
-
-const User = new mongoose.model("User", userSchema);
-
-passport.use(User.createStrategy());
-
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
-passport.deserializeUser(function(id, done) {
-  User.findById(id, function(err, user) {
-    done(err, user);
+app.use(routes);
+
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    error: err.status ? err.message : "Internal server error"
   });
 });
 
-passport.use(new GoogleStrategy({
-    clientID: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: "http://127.0.0.1:5000/auth/google/questions",
-    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
-  },
-  function(accessToken, refreshToken, profile, cb) {
-    console.log(profile);
+async function start() {
+  const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/onlineJudge";
+  const port = Number(process.env.PORT) || 5000;
 
-    User.findOrCreate({ googleId: profile.id }, function (err, user) {
-      return cb(err, user);
-    });
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error("JWT_SECRET must be configured with at least 32 characters");
   }
-));
-
-app.get("/", function(req, res){
-  res.render("home");
-});
-
-app.get("/auth/google",
-  passport.authenticate('google', { scope: ["profile"] })
-);
-
-app.get("/auth/google/questions",
-  passport.authenticate('google', { failureRedirect: "/login" }),
-  function(req, res) {
-    // Successful authentication, redirect to secrets.
-    res.redirect("/questions");
-  });
-
-app.get("/login", function(req, res){
-  res.render("login");
-});
-
-app.get("/register", function(req, res){
-  res.render("register");
-});
-
-app.get("/questions", function(req, res){
-  User.find({"questions": {$ne: null}}, function(err, foundUsers){
-    if (err){
-      console.log(err);
-    } else {
-      if (foundUsers) {
-        res.render("questions", {usersWithSecrets: foundUsers});
-      }
-    }
-  });
-});
-
-app.get("/submit", function(req, res){
-  if (req.isAuthenticated()){
-    res.render("submit");
-  } else {
-    res.redirect("/login");
+  if (!new Set(["disabled", "docker"]).has(process.env.JUDGE_ENGINE || "disabled")) {
+    throw new Error("JUDGE_ENGINE must be either disabled or docker");
   }
-});
 
-app.post("/submit", function(req, res){
-  const submittedSecret = req.body.secret;
-
-//Once the user is authenticated and their session gets saved, their user details are saved to req.user.
-  // console.log(req.user.id);
-
-  User.findById(req.user.id, function(err, foundUser){
-    if (err) {
-      console.log(err);
-    } else {
-      if (foundUser) {
-        foundUser.secret = submittedSecret;
-        foundUser.save(function(){
-          res.redirect("/questions");
-        });
-      }
-    }
+  mongoose.set("sanitizeFilter", true);
+  await mongoose.connect(mongoUri);
+  app.listen(port, () => {
+    console.log(`Server is listening on port ${port}`);
   });
-});
+}
 
-app.get("/logout", function(req, res){
-  req.logout();
-  res.redirect("/");
-});
-
-app.post("/register", function(req, res){
-
-  console.log("Hey")
-  User.register({username: req.body.username}, req.body.password, function(err, user){
-    if (err) {
-      console.log(err);
-      console.log("Hey")
-      res.redirect("http://127.0.0.1:3000/register");
-    } else {
-      passport.authenticate("local")(req, res, function(){
-        res.redirect("http://127.0.0.1:3000/questions");
-      });
-    }
+if (require.main === module) {
+  start().catch(error => {
+    console.error("Unable to start server:", error.message);
+    process.exitCode = 1;
   });
+}
 
-});
-
-app.post("/login", function(req, res){
-
-  const user = new User({
-    username: req.body.username,
-    password: req.body.password
-  });
-
-  req.login(user, function(err){
-    if (err) {
-      console.log(err);
-    } else {
-      passport.authenticate("local")(req, res, function(){
-        res.redirect("http://127.0.0.1:3000/questions");
-      });
-    }
-  });
-
-});
-
-app.post("/samplecompiler/run", async (req, res) => {
-    // const language = req.body.language;
-    // const code = req.body.code;
-
-    const { language = 'cpp', code } = req.body;
-    if (code === undefined) {
-        res.status(404).json({ success: false, error: "Empty code!" });
-    }
-    try {
-        const filePath = await generateFile(language, code);
-        const output = await executeCpp(filePath);
-        res.json({ filePath, output });
-    } catch (error) {
-        res.status(500).json({ error: error });
-    }
-});
-
-app.listen(5000, () => {
-    console.log("Server is listening on port 5000!");
-});
+module.exports = { app, start };

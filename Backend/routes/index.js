@@ -1,7 +1,5 @@
 const router = require('express').Router();
-const { application } = require('express');
 const auth = require('./api/auth')
-const admin = require('./api/admin')
 const submit = require('./api/submit')
 const question = require('./api/question')
 // api routes
@@ -12,8 +10,6 @@ router.get('/',(req,res)=>{
 
 
 router.use('/api/auth',auth) // sign up, login, change password
-
-router.use('/api/admin',admin) // manage questions , users , data 
 
 router.use('/api/submit',submit) //submit solution
 

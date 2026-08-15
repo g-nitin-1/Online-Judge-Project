@@ -15,7 +15,8 @@ var question = new Question({
     difficulty: req.body.difficulty,
     frequency: req.body.frequency,
     rating: req.body.rating,
-    hints: req.body.hints
+    hints: req.body.hints,
+    testCases: req.body.testCases
   });
 try {
 
@@ -36,7 +37,7 @@ try {
 
 const question_all = async (req,res)=>{
      try {
-       const data =  await Question.find({})
+       const data =  await Question.find({}).select("-solution")
           .sort({ sequence: "asc" })
       
         res.status(200).json(data);
@@ -53,7 +54,11 @@ const GetOne = async (req,res)=>{
      const Q_id = req.params.id 
      try {
       
-      const Q_one = await Question.findOne({uniquename:Q_id})
+      const Q_one = await Question.findOne({uniquename:Q_id}).select("-solution")
+
+      if (!Q_one) {
+        return res.status(404).json({ success: false, error: "Question not found" });
+      }
 
        res.status(200).json({
         success: true,
